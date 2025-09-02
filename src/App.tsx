@@ -10,6 +10,8 @@ import { InstantImageUpload } from './components/InstantImageUpload';
 import { InstantReceipt } from './components/InstantReceipt';
 import { InstantVoiceNote } from './components/InstantVoiceNote';
 import { BottomNavigation } from './components/BottomNavigation';
+import { LoginScreen } from './components/LoginScreen';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { storageService } from './services/storage';
 
 export interface Note {
@@ -39,7 +41,8 @@ export interface Project {
   shootDates?: Date[];
 }
 
-export default function App() {
+function AppContent() {
+  const { user, loading } = useAuth();
   const [projects, setProjects] = useState<Project[]>([]);
   
   const [currentView, setCurrentView] = useState<'home' | 'project' | 'notes' | 'tasks' | 'tool'>('home');
@@ -99,6 +102,20 @@ export default function App() {
       setCurrentView('project');
     }
   };
+
+  // Show loading spinner while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+      </div>
+    );
+  }
+
+  // Show login screen if not authenticated
+  if (!user) {
+    return <LoginScreen />;
+  }
 
   const renderCurrentView = () => {
     switch (currentView) {
@@ -172,5 +189,13 @@ export default function App() {
         />
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

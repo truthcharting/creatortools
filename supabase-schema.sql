@@ -1,6 +1,3 @@
--- Enable Row Level Security
-ALTER TABLE IF EXISTS auth.users ENABLE ROW LEVEL SECURITY;
-
 -- Create users table (extends Supabase auth.users)
 CREATE TABLE IF NOT EXISTS public.users (
   id UUID REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
@@ -222,7 +219,7 @@ CREATE POLICY "Users can delete own voice notes" ON public.voice_notes
 CREATE POLICY "Users can view own timestamps" ON public.timestamps
   FOR SELECT USING (auth.uid() = user_id);
 
-CREATE POLICY "Users can insert own timestamps" ON public.voice_notes
+CREATE POLICY "Users can insert own timestamps" ON public.timestamps
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 CREATE POLICY "Users can update own timestamps" ON public.timestamps

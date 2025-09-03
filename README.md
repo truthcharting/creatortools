@@ -31,17 +31,30 @@ cd creatortools
 npm install
 ```
 
-### 2. Supabase Setup
+### 2. Supabase Setup (Step-by-Step)
 
-1. **Go to your Supabase project dashboard** (https://supabase.com/dashboard/project/pyvpjmssbtvwkzzvobgf)
+**IMPORTANT**: Run these SQL scripts in order to avoid permission issues.
+
+1. **Go to your Supabase project dashboard**: https://supabase.com/dashboard/project/pyvpjmssbtvwkzzvobgf
 
 2. **Navigate to SQL Editor** in the left sidebar
 
-3. **Copy and paste the entire contents** of `supabase-schema.sql` into the SQL editor
+3. **Step 1: Create Tables**
+   - Copy the contents of `supabase-schema-basic.sql`
+   - Paste into SQL editor and run
+   - This creates all the basic tables without permissions
 
-4. **Run the SQL script** to create all tables, policies, and storage buckets
+4. **Step 2: Enable Security Policies**
+   - Copy the contents of `supabase-policies.sql`
+   - Paste into SQL editor and run
+   - This enables Row Level Security and creates access policies
 
-5. **Verify the setup**:
+5. **Step 3: Setup Storage and Functions**
+   - Copy the contents of `supabase-storage.sql`
+   - Paste into SQL editor and run
+   - This creates storage buckets and database functions
+
+6. **Verify the setup**:
    - Check that all tables are created in the "Tables" section
    - Verify storage buckets are created in the "Storage" section
    - Ensure Row Level Security (RLS) is enabled on all tables
@@ -116,7 +129,7 @@ src/
 
 ### Adding New Features
 
-1. **Database**: Add new tables to `supabase-schema.sql`
+1. **Database**: Add new tables to the SQL schema files
 2. **Types**: Update `src/types/database.ts`
 3. **Services**: Add methods to `src/services/supabaseService.ts`
 4. **Components**: Create new React components
@@ -134,10 +147,11 @@ The app is configured for automatic deployment to GitHub Pages:
 
 ### Common Issues
 
-1. **Authentication Errors**: Check Supabase project settings and API keys
-2. **Database Errors**: Verify SQL schema was run successfully
-3. **Storage Issues**: Check storage bucket policies and permissions
-4. **Build Errors**: Ensure all dependencies are installed
+1. **Permission Errors**: Make sure to run SQL scripts in the correct order
+2. **Authentication Errors**: Check Supabase project settings and API keys
+3. **Database Errors**: Verify SQL schema was run successfully
+4. **Storage Issues**: Check storage bucket policies and permissions
+5. **Build Errors**: Ensure all dependencies are installed
 
 ### Supabase Dashboard Checks
 
@@ -145,6 +159,13 @@ The app is configured for automatic deployment to GitHub Pages:
 - **Database**: Check that all tables exist and RLS is enabled
 - **Storage**: Confirm storage buckets are created
 - **API**: Verify API keys are correct
+
+### SQL Script Order
+
+Always run the SQL scripts in this order:
+1. `supabase-schema-basic.sql` - Creates tables
+2. `supabase-policies.sql` - Enables security
+3. `supabase-storage.sql` - Sets up storage and functions
 
 ## Support
 
@@ -154,6 +175,7 @@ For issues or questions:
 2. Review browser console for frontend errors
 3. Check GitHub Actions for deployment issues
 4. Verify database schema and policies
+5. Ensure SQL scripts were run in the correct order
 
 ## License
 

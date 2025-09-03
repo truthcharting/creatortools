@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { HomeScreen } from './components/HomeScreen';
 import { TasksScreen } from './components/TasksScreen';
 import { ProjectScreen } from './components/ProjectScreen';
-import { NotesScreen } from './components/NotesScreen';
+import { SupabaseNotesScreen } from './components/SupabaseNotesScreen';
 import { InstantTimestamp } from './components/InstantTimestamp';
 import { InstantNote } from './components/InstantNote';
 import { InstantPic } from './components/InstantPic';
@@ -145,13 +145,7 @@ function AppContent() {
         ) : null;
       
       case 'notes':
-        return (
-          <NotesScreen 
-            projects={projects}
-            selectedProject={selectedProject}
-            onSelectProject={setSelectedProject}
-          />
-        );
+        return <SupabaseNotesScreen />;
       
       case 'tool':
         switch (selectedTool) {

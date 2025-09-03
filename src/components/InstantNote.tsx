@@ -5,20 +5,22 @@ import { Badge } from './ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { ArrowLeft, MapPin, Clock, Save, Check } from 'lucide-react';
 import { format } from 'date-fns';
-import { NoteData } from '../types';
-import { storageService } from '../services/storage';
+import { useAuth } from '../contexts/AuthContext';
+import { noteService } from '../services/supabaseService';
 
 interface InstantNoteProps {
   onBack: () => void;
 }
 
 export function InstantNote({ onBack }: InstantNoteProps) {
+  const { user } = useAuth();
   const [noteText, setNoteText] = useState('');
   const [geolocation, setGeolocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isLocationLoading, setIsLocationLoading] = useState(true);
-  const [savedNote, setSavedNote] = useState<NoteData | null>(null);
+  const [savedNote, setSavedNote] = useState<any>(null);
   const [showSavedNotification, setShowSavedNotification] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     // Get geolocation
@@ -43,29 +45,35 @@ export function InstantNote({ onBack }: InstantNoteProps) {
     }
   }, []);
 
-  const saveNote = () => {
-    if (!noteText.trim()) return;
+  const saveNote = async () => {
+    if (!noteText.trim() || !user) return;
 
-    const noteData: NoteData = {
-      id: `note-${Date.now()}`,
-      type: 'note',
-      text: noteText.trim(),
-      timestamp: new Date(),
-      geolocation,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    setIsSaving(true);
+    try {
+      const noteData = {
+        user_id: user.id,
+        title: noteText.trim().substring(0, 100) + (noteText.length > 100 ? '...' : ''),
+        content: noteText.trim(),
+        tags: [],
+        project_id: null
+      };
 
-    storageService.saveInstantData(noteData);
-    setSavedNote(noteData);
-    setShowSavedNotification(true);
-    
-    // Clear form after saving
-    setTimeout(() => {
-      setNoteText('');
-      setSavedNote(null);
-      setShowSavedNotification(false);
-    }, 2000);
+      const savedNote = await noteService.create(noteData);
+      setSavedNote(savedNote);
+      setShowSavedNotification(true);
+      
+      // Clear form after saving
+      setTimeout(() => {
+        setNoteText('');
+        setSavedNote(null);
+        setShowSavedNotification(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Error saving note:', error);
+      // You could add error handling UI here
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getLocationStatus = () => {
@@ -118,11 +126,11 @@ export function InstantNote({ onBack }: InstantNoteProps) {
             {/* Save Button */}
             <Button 
               onClick={saveNote}
-              disabled={!noteText.trim()}
+              disabled={!noteText.trim() || isSaving}
               className="w-full h-12 text-lg font-semibold"
             >
               <Save className="h-5 w-5 mr-2" />
-              Save Note
+              {isSaving ? 'Saving...' : 'Save Note'}
             </Button>
           </CardContent>
         </Card>
@@ -134,9 +142,9 @@ export function InstantNote({ onBack }: InstantNoteProps) {
               <div className="flex items-center gap-3">
                 <Check className="h-6 w-6 text-green-600" />
                 <div>
-                  <p className="font-semibold text-green-800">Note Saved!</p>
+                  <p className="font-semibold text-green-800">Note Saved to Cloud! ☁️</p>
                   <p className="text-sm text-green-600">
-                    {format(savedNote.timestamp, 'MMM dd, yyyy - h:mm a')}
+                    {format(new Date(), 'MMM dd, yyyy - h:mm a')}
                   </p>
                 </div>
               </div>

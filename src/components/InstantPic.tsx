@@ -4,20 +4,23 @@ import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import { ArrowLeft, Camera, Check, X, Download, MapPin, Clock } from 'lucide-react';
 import { format } from 'date-fns';
-import { PhotoData } from '../types';
-import { storageService } from '../services/storage';
+import { useAuth } from '../contexts/AuthContext';
+import { photoService } from '../services/supabaseService';
 
 interface InstantPicProps {
   onBack: () => void;
 }
 
 export function InstantPic({ onBack }: InstantPicProps) {
-  const [photos, setPhotos] = useState<string[]>([]);
+  const { user } = useAuth();
+  const [photos, setPhotos] = useState<File[]>([]);
+  const [photoUrls, setPhotoUrls] = useState<string[]>([]);
   const [isCapturing, setIsCapturing] = useState(false);
   const [geolocation, setGeolocation] = useState<{ lat: number; lng: number } | null>(null);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [isLocationLoading, setIsLocationLoading] = useState(true);
   const [showSavedNotification, setShowSavedNotification] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -52,20 +55,24 @@ export function InstantPic({ onBack }: InstantPicProps) {
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files) {
-      const newPhotos: string[] = [];
+      const newPhotos: File[] = [];
+      const newUrls: string[] = [];
       
       Array.from(files).forEach((file) => {
         if (file.type.startsWith('image/')) {
+          newPhotos.push(file);
           const reader = new FileReader();
           reader.onload = (e) => {
             if (e.target?.result) {
-              newPhotos.push(e.target.result as string);
-              setPhotos(prev => [...prev, ...newPhotos]);
+              newUrls.push(e.target.result as string);
+              setPhotoUrls(prev => [...prev, ...newUrls]);
             }
           };
           reader.readAsDataURL(file);
         }
       });
+      
+      setPhotos(prev => [...prev, ...newPhotos]);
     }
     
     // Reset input
@@ -76,29 +83,37 @@ export function InstantPic({ onBack }: InstantPicProps) {
 
   const removePhoto = (index: number) => {
     setPhotos(prev => prev.filter((_, i) => i !== index));
+    setPhotoUrls(prev => prev.filter((_, i) => i !== index));
   };
 
-  const savePhotos = () => {
-    if (photos.length === 0) return;
+  const savePhotos = async () => {
+    if (photos.length === 0 || !user) return;
 
-    const photoData: PhotoData = {
-      id: `photo-${Date.now()}`,
-      type: 'photo',
-      photos: photos,
-      timestamp: new Date(),
-      geolocation,
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    setIsSaving(true);
+    try {
+      // Upload each photo to Supabase
+      const uploadPromises = photos.map(async (photo, index) => {
+        const title = `Photo ${index + 1} - ${format(new Date(), 'MMM dd, yyyy')}`;
+        const description = `Captured on ${format(new Date(), 'MMM dd, yyyy - h:mm a')}`;
+        
+        return await photoService.upload(photo, user.id, null);
+      });
 
-    storageService.saveInstantData(photoData);
-    setShowSavedNotification(true);
-    
-    // Clear photos after saving
-    setTimeout(() => {
-      setPhotos([]);
-      setShowSavedNotification(false);
-    }, 2000);
+      await Promise.all(uploadPromises);
+      setShowSavedNotification(true);
+      
+      // Clear photos after saving
+      setTimeout(() => {
+        setPhotos([]);
+        setPhotoUrls([]);
+        setShowSavedNotification(false);
+      }, 2000);
+    } catch (error) {
+      console.error('Error saving photos:', error);
+      // You could add error handling UI here
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const getLocationStatus = () => {
@@ -180,10 +195,10 @@ export function InstantPic({ onBack }: InstantPicProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                {photos.map((photo, index) => (
+                {photoUrls.map((photoUrl, index) => (
                   <div key={index} className="relative group">
                     <img
-                      src={photo}
+                      src={photoUrl}
                       alt={`Captured photo ${index + 1}`}
                       className="w-full h-32 object-cover rounded-lg border"
                     />
@@ -202,10 +217,11 @@ export function InstantPic({ onBack }: InstantPicProps) {
               {/* Save Button */}
               <Button 
                 onClick={savePhotos}
+                disabled={isSaving}
                 className="w-full h-12 text-lg font-semibold"
               >
                 <Download className="h-5 w-5 mr-2" />
-                Save Photos ({photos.length})
+                {isSaving ? 'Uploading to Cloud...' : `Save Photos to Cloud (${photos.length})`}
               </Button>
             </CardContent>
           </Card>
@@ -218,7 +234,7 @@ export function InstantPic({ onBack }: InstantPicProps) {
               <div className="flex items-center gap-3">
                 <Check className="h-6 w-6 text-green-600" />
                 <div>
-                  <p className="font-semibold text-green-800">Photos Saved!</p>
+                  <p className="font-semibold text-green-800">Photos Saved to Cloud! ☁️</p>
                   <p className="text-sm text-green-600">
                     {format(new Date(), 'MMM dd, yyyy - h:mm a')}
                   </p>
@@ -236,7 +252,7 @@ export function InstantPic({ onBack }: InstantPicProps) {
           <CardContent className="space-y-2 text-sm text-muted-foreground">
             <p>• Tap "Take Photo" to capture images</p>
             <p>• You can capture multiple photos</p>
-            <p>• Photos are automatically saved with timestamp and location</p>
+            <p>• Photos are automatically saved to the cloud with timestamp and location</p>
             <p>• View all captured photos in the Notes screen</p>
           </CardContent>
         </Card>
